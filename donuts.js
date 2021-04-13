@@ -32,7 +32,7 @@ var shopInventory = {
 	apple: new donutData("Apple Fritter", 1, 24),
 	hole: new donutData("Donut Hole", .5, 48),
 }
-//.find on an array of classes?
+
 
 console.log(shopInventory)
 
@@ -54,23 +54,36 @@ function mainMenu() {
 			//createNewDonut();
 			break;
 		case "4":
-			//addDonuts();
+			let donutToAdd = getDonutChoice(shopInventory, false);
+			if(donutToAdd === null){
+				alert("Action cancelled");
+				break;
+			}
+			let quantityToAdd = getDonutQuantity(donutToAdd, false);
+			if(quantityToAdd === 0){
+				alert("Action cancelled")
+				break;
+			}
+			let additionConfirmed = confirm(`${quantityToAdd} ${donutToAdd["donutName"]}(s) will be added to shop inventory`);
+			if(additionConfirmed){
+				addDonuts(donutToAdd, quantityToAdd);
+			}
 			break;
 		case "5":
-			let donutChoice = getDonutChoice(shopInventory);
-			if (donutChoice === null){
+			let donutToBuy = getDonutChoice(shopInventory, true);
+			if (donutToBuy === null){
 				alert("Order cancelled");
 				break;
 			}
-			let orderQuantity = getOrderQuantity(shopInventory, donutChoice);
+			let orderQuantity = getDonutQuantity(donutToBuy, true);
 			if (orderQuantity === 0){
 				alert("Order cancelled");
 				break;
 			}
-			let orderPrice = getOrderPrice(shopInventory, donutChoice, orderQuantity);
-			let orderConfirmed = confirm(`Confirm purchase of ${orderQuantity} ${shopInventory[donutChoice]["donutName"]}(s) for ${convertToDollars(orderPrice)}?`);
+			let orderPrice = getOrderPrice(donutToBuy, orderQuantity);
+			let orderConfirmed = confirmOrder(donutToBuy, orderQuantity, orderPrice);
 			if(orderConfirmed) {
-				recordOrder(shopInventory, donutChoice, orderQuantity, orderPrice);
+				recordOrder(donutToBuy, orderQuantity, orderPrice);
 				alert("Thank you for your purchase!");
 			}
 			break;
@@ -106,10 +119,10 @@ function printRevenue(revenueTotal, inventoryObject){
 	return;
 }
 
-function getDonutChoice(inventoryObject){
+function getDonutChoice(inventoryObject, purcahse){
 	let donutChoice;
 	let keyArray = Object.keys(inventoryObject);
-	let optionsDisplay = ["Enter the item key for the donut you wish to purcahse (listed in parentheses)"];
+	let optionsDisplay = [`Enter the item key for the donut you wish to ${purcahse ? "purchase": "add"} (listed in parentheses)`];
 	keyArray.forEach( function(donutEntry){
 		optionsDisplay.push(`(${donutEntry}) ${inventoryObject[donutEntry]["donutName"]}, ${convertToDollars(inventoryObject[donutEntry]["donutPrice"])} each`)
 	});
@@ -127,33 +140,44 @@ function getDonutChoice(inventoryObject){
 			continue;
 		}
 	}
+	donutChoice = inventoryObject[donutChoice];
 	return donutChoice;
 }
 
-function getOrderQuantity(inventoryObject, donutType){
+function getDonutQuantity(donutObject, purchase){
 	let quantity = 0;
 	while(true){
-		quantity = Number( prompt(`Enter the quantity of ${inventoryObject[donutType]["donutName"]}s you would like to purchase`, "") );
+		quantity = Number( prompt(`Enter the quantity of ${donutObject["donutName"]}s you would like to ${purchase ? "purchase": "add to inventory"}`, "") );
 		if (isNaN(quantity) || (quantity < 0) || (Math.floor(quantity) != quantity)){
 			alert("Please enter a positive, whole number");
 			continue;
 		}
-		else if (inventoryObject[donutType]["donutQuantityInStore"] < quantity){
-			quantity = inventoryObject[donutType]["donutQuantityInStore"];
-			alert(`Sorry, we only have ${quantity} ${inventoryObject[donutType]["donutName"]}(s) in the store. Your order has been changed to ${quantity} donuts.`)
+		else if (purchase && donutObject["donutQuantityInStore"] < quantity){
+			quantity = donutObject["donutQuantityInStore"];
+			alert(`Sorry, we only have ${quantity} ${donutObject["donutName"]}(s) in the store. Your order has been changed to ${quantity} donuts.`)
 		}
 		break;
 	}
 	return quantity;
 }
 
-function getOrderPrice(inventoryObject, donutType, quantity){
-	return (inventoryObject[donutType]["donutPrice"] * quantity);
+function addDonuts(donutObject, quantity){
+	donutObject["donutQuantityInStore"] += quantity;
 }
-function recordOrder(inventoryObject, donutType, quantity, price){
-	inventoryObject[donutType]["donutQuantityInStore"] -= quantity;
-	inventoryObject[donutType]["donutQuantitySold"] += quantity;
-	inventoryObject[donutType]["donutIndividualRevenue"] += price;
+
+function getOrderPrice(donutObject, quantity){
+	return (donutObject["donutPrice"] * quantity);
+}
+
+function confirmOrder(donutObject, quantity, price){
+	let confirmationMessage = `Confirm order of ${quantity} ${donutObject["donutName"]}(s) for ${convertToDollars(price)}?`
+	return confirm(confirmationMessage);
+}
+
+function recordOrder(donutObject, quantity, price){
+	donutObject["donutQuantityInStore"] -= quantity;
+	donutObject["donutQuantitySold"] += quantity;
+	donutObject["donutIndividualRevenue"] += price;
 	shopTotalSold += quantity;
 	shopRevenue += price;
 	return;
